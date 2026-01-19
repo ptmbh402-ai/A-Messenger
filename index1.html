@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Private Message</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background:
+        linear-gradient(rgba(255,200,220,0.8), rgba(255,200,220,0.8)),
+        url('https://images.unsplash.com/photo-1588776814546-1ffcf47267a5');
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .box {
+      width: 360px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 28px;
+      border-radius: 16px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.25);
+      color: #333;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 8px;
+      color: #c2255c;
+      font-weight: 600;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 14px;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 11px;
+      border-radius: 8px;
+      border: 1px solid #f1c0d0;
+      font-size: 14px;
+    }
+
+    textarea {
+      resize: none;
+      height: 110px;
+    }
+
+    button {
+      background: #f06595;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+    }
+
+    button:hover {
+      background: #e64980;
+    }
+
+    .hidden { display: none; }
+
+    .note {
+      font-size: 12px;
+      opacity: 0.8;
+      text-align: center;
+      margin-top: 8px;
+      color: #555;
+    }
+
+    .time {
+      font-size: 12px;
+      color: #888;
+      margin-top: 6px;
+      text-align: right;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="box">
+    <h2>Private Message</h2>
+    <div class="subtitle">Personal notes • Secure access</div>
+
+    <div id="login">
+      <input type="password" id="password" placeholder="Enter password" />
+      <button onclick="unlock()">Unlock</button>
+    </div>
+
+    <div id="editor" class="hidden">
+      <textarea id="message" placeholder="Write your message here..."></textarea>
+      <div id="time" class="time"></div>
+      <button onclick="sendMessage()">Save Message</button>
+      <button onclick="readMessage()">Read Message</button>
+      <p class="note">End‑to‑end encrypted. Looks like a normal notes page.</p>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCnyhV58WzDSR4kSPuH6aC8ojcfCW2qtgk",
+      authDomain: "messenger-88e41.firebaseapp.com",
+      databaseURL: "https://messenger-88e41-default-rtdb.firebaseio.com",
+      projectId: "messenger-88e41",
+      storageBucket: "messenger-88e41.firebasestorage.app",
+      messagingSenderId: "235166258459",
+      appId: "1:235166258459:web:5818f717af9dd3e8e4efbe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    let SECRET = "";
+
+    window.unlock = () => {
+      SECRET = document.getElementById('password').value;
+      if (SECRET.length < 4) {
+        alert('Password too short');
+        return;
+      }
+      document.getElementById('login').classList.add('hidden');
+      document.getElementById('editor').classList.remove('hidden');
+    };
+
+    window.sendMessage = async () => {
+      const msg = document.getElementById('message').value;
+      const time = new Date().toLocaleString();
+      const payload = {
+        data: CryptoJS.AES.encrypt(msg, SECRET).toString(),
+        time: time
+      };
+      await set(ref(db, 'secret/message'), payload);
+      document.getElementById('time').innerText = 'Saved at: ' + time;
+      alert('Message saved');
+    };
+
+    window.readMessage = async () => {
+      const snap = await get(ref(db, 'secret/message'));
+      if (!snap.exists()) {
+        alert('No message found');
+        return;
+      }
+      try {
+        const obj = snap.val();
+        const decrypted = CryptoJS.AES.decrypt(obj.data, SECRET).toString(CryptoJS.enc.Utf8);
+        if (!decrypted) throw '';
+        document.getElementById('message').value = decrypted;
+        document.getElementById('time').innerText = 'Saved at: ' + obj.time;
+      } catch {
+        alert('Wrong password');
+      }
+    };
+  </script>
+</body>
+</html>
